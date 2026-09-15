@@ -1,0 +1,1063 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Общая выставка</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/ui@5.0/dist/fancybox/fancybox.css" />
+    <style>
+        :root { --thumb-size: 450px; }
+        body { font-family: 'Segoe UI', system-ui, sans-serif; background: #0a0a0a; color: #ddd; margin: 0; padding: 0; }
+        .container { width: 98%; max-width: 1600px; margin: 0 auto; padding: 20px; box-sizing: border-box; }
+        .header-nav { 
+            position: sticky; top: 0; background: rgba(20, 20, 20, 0.95); 
+            backdrop-filter: blur(10px); border-bottom: 1px solid #333; 
+            z-index: 1000; padding: 15px 0; text-align: center;
+            display: flex; justify-content: center; align-items: center; gap: 15px; flex-wrap: wrap;
+        }
+        .btn { 
+            display: inline-block; color: #fff; text-decoration: none; background: #222; 
+            padding: 10px 25px; border-radius: 30px; margin: 0 5px; font-weight: 500;
+            border: 1px solid #444; transition: all 0.1s ease; font-size: 14px; cursor: pointer;
+        }
+        .btn:hover { background: #00d4ff; border-color: #00d4ff; color: #000; }
+        .btn-active { background: #ffcc00; color: #000; border: none; }
+        .btn-review { background: #8b0000; border-color: #ff4444; }
+        .btn-review:hover { background: #ff0000; border-color: #ff0000; }
+        .btn-review.active { background: #ffcc00; color: #000; border-color: #ffcc00; }
+
+        .size-control { display: flex; align-items: center; gap: 10px; background: #222; padding: 5px 15px; border-radius: 30px; border: 1px solid #444; color: #fff; font-size: 12px; }
+        .size-control input { cursor: pointer; width: 100px; }
+
+        h1 { text-align: center; margin-top: 30px; color: #fff; font-weight: 300; }
+        h2 { color: #ffcc00; border-left: 4px solid #ffcc00; padding-left: 15px; margin: 40px 0 15px 0; font-size: 1.3rem; clear: both; }
+        
+        .user-list { list-style: none; padding: 0; margin-top: 30px; display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 15px; }
+        .user-item { background: #161616; border-radius: 12px; border: 1px solid #222; transition: 0.1s; }
+        .user-item:hover { background: #222; border-color: #00d4ff; transform: translateX(5px); }
+        .user-link { display: flex; align-items: center; padding: 15px 20px; color: #00d4ff; text-decoration: none; font-size: 1.1rem; }
+        .list-num { background: #ffcc00; color: #000; font-weight: bold; width: 34px; height: 34px; display: flex; align-items: center; justify-content: center; border-radius: 50%; margin-right: 15px; flex-shrink: 0; }
+
+        .gallery { display: grid !important; grid-template-columns: repeat(auto-fit, var(--thumb-size)) !important; justify-content: center !important; gap: 15px !important; margin-bottom: 30px; width: 100%; }
+        .gallery-item { position: relative; border-radius: 10px; overflow: hidden; border: 1px solid #222; background: #000; display: flex; flex-direction: column; }
+        .gallery-item img { width: 100%; height: auto; display: block; cursor: pointer; transition: 0.2s; }
+        .gallery-item:hover img { transform: scale(1.03); }
+        
+        .tag-badge { background: #111; color: #ffcc00; padding: 8px 10px; font-size: 12px; font-weight: bold; border-top: 1px solid #333; text-align: center; }
+
+        .comment-toggle {
+            background: #1a1a1a;
+            color: #00d4ff;
+            border: none;
+            border-top: 1px solid #333;
+            padding: 8px 10px;
+            font-size: 12px;
+            cursor: pointer;
+            width: 100%;
+            text-align: center;
+            transition: 0.15s;
+        }
+        .comment-toggle:hover { background: #222; color: #ffcc00; }
+        .comment-box {
+            display: none;
+            background: #0f0f0f;
+            border-top: 1px solid #333;
+            padding: 12px 14px;
+            font-size: 13px;
+            line-height: 1.5;
+            color: #ccc;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .comment-box.open { display: block; }
+
+        #review-canvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 99999; display: none; cursor: crosshair; touch-action: none; background: transparent !important; pointer-events: none; }
+        #review-canvas.active { display: block !important; pointer-events: auto; }
+        
+        #review-tools { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); z-index: 100000; background: rgba(0,0,0,0.9); padding: 10px 25px; border-radius: 50px; display: none; gap: 15px; align-items: center; border: 2px solid #ffcc00; }
+        .btn-clear { background: #444; color: #fff; border: none; padding: 5px 12px; border-radius: 20px; font-size: 11px; cursor: pointer; }
+        .btn-exit { background: #8b0000; border-color: #ff4444; }
+
+        /* --- КНОПКА ПАЛИТРЫ --- */
+        .btn-color {
+            width: 30px; height: 30px; border-radius: 50%;
+            background: #f00;
+            border: 2px solid #fff;
+            cursor: pointer;
+            padding: 0;
+        }
+        .btn-color:hover { transform: scale(1.1); }
+
+        /* --- ПАНЕЛЬ ПАЛИТРЫ --- */
+        #palette-panel {
+            position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%);
+            z-index: 100001; background: rgba(0,0,0,0.95);
+            padding: 12px; border-radius: 12px;
+            display: none; border: 2px solid #ffcc00;
+        }
+        #palette-panel.open { display: block; }
+
+        .palette {
+            display: grid;
+            grid-template-columns: repeat(10, 26px);
+            grid-auto-rows: 26px;
+            gap: 3px;
+        }
+
+        .swatch {
+            width: 26px; height: 26px;
+            border-radius: 4px;
+            border: 2px solid transparent;
+            cursor: pointer;
+            transition: 0.1s;
+            box-sizing: border-box;
+        }
+        .swatch:hover {
+            transform: scale(1.15);
+            border-color: #fff;
+            z-index: 2;
+        }
+        .swatch.active {
+            border-color: #fff;
+            box-shadow: 0 0 0 2px #ffcc00, 0 0 10px rgba(255,204,0,0.8);
+            transform: scale(1.1);
+        }
+
+        @media (max-width: 700px) {
+            .palette { grid-template-columns: repeat(10, 18px); grid-auto-rows: 18px; }
+            .swatch { width: 18px; height: 18px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="header-nav">
+        <a href="index.html" class="btn ">🏠 ГЛАВНАЯ</a>
+        <a href="all_photos.html" class="btn btn-active">🖼️ ВСЕ ФОТО (ВЫСТАВКА)</a>
+        <div class="size-control">
+            <span>Размер:</span>
+            <input type="range" id="sizeSlider" min="150" max="2000" value="450">
+        </div>
+        <button id="reviewToggleBtn" class="btn btn-review">✏️ РЕЖИМ РАЗБОРА</button>
+    </div>
+    <canvas id="review-canvas"></canvas>
+    <div id="review-tools">
+        <button class="btn-color" id="colorPickerBtn" title="Палитра"></button>
+        <button class="btn-clear" onclick="clearCanvas()">ОЧИСТИТЬ</button>
+        <button class="btn-clear btn-exit" onclick="toggleReview()">ВЫЙТИ</button>
+        <span style="color:#ffcc00; font-size:11px; margin-left:10px;">РЕЖИМ РАЗБОРА</span>
+    </div>
+
+    <!-- ПАНЕЛЬ ПАЛИТРЫ -->
+    <div id="palette-panel">
+        <div class="palette" id="palette"></div>
+    </div>
+
+<div class="container">
+<h1>Общая выставка 15 сентября 2026 год</h1><h2>01_D. Наташа</h2><div class='gallery'>
+            <div class="gallery-item">
+                <a href="assets/user630748018/01_D_Наташа_1_ДУБЛЬ.jpg" data-fancybox="all_gallery" data-caption="01_D. Наташа | 01_D_Наташа_1_ДУБЛЬ.jpg">
+                    <img src="assets/user630748018/01_D_Наташа_1_ДУБЛЬ.jpg" loading="lazy">
+                </a>
+                <div class="tag-badge">01_D_Наташа_1_ДУБЛЬ.jpg</div>
+                <button class="comment-toggle" type="button">💬 Показать комментарий</button><div class="comment-box">Работа от Надежды. «Одиночество» холст масло текстурная паста поталь.  Крылья птицы с ликом женщины переливаются всеми цветами радуги, словно хранят в себе всю палитру человеческих эмоций и переживаний.
+Дерево как символ жизни, а голые ветви его отражают цикличность бытия.  Сейчас осень  но весна обязательно придет. Одиночество не вечно, оно лишь часть жизненного пути.
+Эта картина говорит нам о том, что одиночество — это не только пустота, но и пространство для размышлений, созерцания и поиска себя.</div>
+            </div>
+            <div class="gallery-item">
+                <a href="assets/user630748018/01_D_Наташа_2_ДУБЛЬ.jpg" data-fancybox="all_gallery" data-caption="01_D. Наташа | 01_D_Наташа_2_ДУБЛЬ.jpg">
+                    <img src="assets/user630748018/01_D_Наташа_2_ДУБЛЬ.jpg" loading="lazy">
+                </a>
+                <div class="tag-badge">01_D_Наташа_2_ДУБЛЬ.jpg</div>
+                <button class="comment-toggle" type="button">💬 Показать комментарий</button><div class="comment-box">Здравствуйте, Олег Леонидович и Владимир Николаевич! В этот раз посылаю на разбор вот такое начало работы. 35×62  Персонажи вырезаны из кальки, пока примеряюсь. Возможно, на лужайку справа добавлю теленка. Это бабушкин дом. Восстанавливала его из памяти и по фото. Это дом и крытый двор. Самый большой дом на улице. Строил его дед. Сколько воспоминаний с ним связано! Олег Леонидович, мне очень нужны ваши советы. Всегда с благодарностью, Наташа</div>
+            </div>
+            <div class="gallery-item">
+                <a href="assets/user630748018/01_D_Наташа_3_ДУБЛЬ.jpg" data-fancybox="all_gallery" data-caption="01_D. Наташа | 01_D_Наташа_3_ДУБЛЬ.jpg">
+                    <img src="assets/user630748018/01_D_Наташа_3_ДУБЛЬ.jpg" loading="lazy">
+                </a>
+                <div class="tag-badge">01_D_Наташа_3_ДУБЛЬ.jpg</div>
+                <button class="comment-toggle" type="button">💬 Показать комментарий</button><div class="comment-box">Переслано из ВК. Здравствуйте, меня зовут Котомцева Ирина, я из Краснодарского края. Город Приморск-Ахтарск. Моя картина написана по мастер-классу. Как добиться ощущения жаркого солнечного дня на ней?</div>
+            </div>
+            <div class="gallery-item">
+                <a href="assets/user630748018/01_D_Наташа_4_ДУБЛЬ.jpg" data-fancybox="all_gallery" data-caption="01_D. Наташа | 01_D_Наташа_4_ДУБЛЬ.jpg">
+                    <img src="assets/user630748018/01_D_Наташа_4_ДУБЛЬ.jpg" loading="lazy">
+                </a>
+                <div class="tag-badge">01_D_Наташа_4_ДУБЛЬ.jpg</div>
+                <button class="comment-toggle" type="button">💬 Показать комментарий</button><div class="comment-box">Огромное спасибо ❤️</div>
+            </div></div><h2>01_V. Victoria Arcadi</h2><div class='gallery'>
+            <div class="gallery-item">
+                <a href="assets/user6980863554/01_V_Victoria Arcadi_1.jpg" data-fancybox="all_gallery" data-caption="01_V. Victoria Arcadi | 01_V_Victoria Arcadi_1.jpg">
+                    <img src="assets/user6980863554/01_V_Victoria Arcadi_1.jpg" loading="lazy">
+                </a>
+                <div class="tag-badge">01_V_Victoria Arcadi_1.jpg</div>
+                <button class="comment-toggle" type="button">💬 Показать комментарий</button><div class="comment-box">Возьмите пожалуйста мою работу на разбор. К сожалению я не успела 🥲 с уважением Виктория Аркади 👌🙏</div>
+            </div></div><h2>02_D. Мария Корнеева</h2><div class='gallery'>
+            <div class="gallery-item">
+                <a href="assets/user5283328040/02_D_Мария Корнеева_1.jpg" data-fancybox="all_gallery" data-caption="02_D. Мария Корнеева | 02_D_Мария Корнеева_1.jpg">
+                    <img src="assets/user5283328040/02_D_Мария Корнеева_1.jpg" loading="lazy">
+                </a>
+                <div class="tag-badge">02_D_Мария Корнеева_1.jpg</div>
+                <button class="comment-toggle" type="button">💬 Показать комментарий</button><div class="comment-box">Добрый день , Олег Леонидович и Владимир Николаевич! Пройдя прекрасный пленэрный наш путь через поля, леса и реки…, вдохновилась написать серию про воду и плавательные средства)) решила сперва потренироваться на маленьком формате 30*40 см, важно ваше мнение получилось ли у меня передать фактуру, плановость и атмосферу, спасибо!</div>
+            </div></div><h2>02_V. Салтанат Атаханова</h2><div class='gallery'>
+            <div class="gallery-item">
+                <a href="assets/user910492481/02_V_Салтанат Атаханова_1.jpg" data-fancybox="all_gallery" data-caption="02_V. Салтанат Атаханова | 02_V_Салтанат Атаханова_1.jpg">
+                    <img src="assets/user910492481/02_V_Салтанат Атаханова_1.jpg" loading="lazy">
+                </a>
+                <div class="tag-badge">02_V_Салтанат Атаханова_1.jpg</div>
+                <button class="comment-toggle" type="button">💬 Показать комментарий</button><div class="comment-box">Здравствуйте,уважаемые метры!
+Эта работа первая акварелью . Понимаю, что  мягко говоря , очень сырая.
+Поэтому хотелось бы услышать от Вас где  провалы и недостатки в цвете и тоне .  Работа полностью творческая , хотела её повторить именно акварелью (она очень непредсказуемая ,тем и покарила меня).Я эту работу отправляла на челлендж ,,окно художника&quot;,там фото более удачное ,скорее всего разное освещение.
+Заранее благодарна Вам!
+А подпись поставлю после ,когда доработаю!</div>
+            </div></div><h2>03_D. Тamara</h2><div class='gallery'>
+            <div class="gallery-item">
+                <a href="assets/user677891676/03_D_Тamara_1.jpg" data-fancybox="all_gallery" data-caption="03_D. Тamara | 03_D_Тamara_1.jpg">
+                    <img src="assets/user677891676/03_D_Тamara_1.jpg" loading="lazy">
+                </a>
+                <div class="tag-badge">03_D_Тamara_1.jpg</div>
+                <button class="comment-toggle" type="button">💬 Показать комментарий</button><div class="comment-box">Здравствуйте, Олег Леонидович и Владимир Николаевич. «Среди роз» 30х40см. Масло. Основная задача была развести зелень в пространстве, чтобы передний, второй, третий план не слипались и писать не через зеленый. Жду замечания и рекомендации как улучшить. Спасибо Вам огромное.</div>
+            </div>
+            <div class="gallery-item">
+                <a href="assets/user677891676/03_D_Тamara_2.jpg" data-fancybox="all_gallery" data-caption="03_D. Тamara | 03_D_Тamara_2.jpg">
+                    <img src="assets/user677891676/03_D_Тamara_2.jpg" loading="lazy">
+                </a>
+                <div class="tag-badge">03_D_Тamara_2.jpg</div>
+                <button class="comment-toggle" type="button">💬 Показать комментарий</button><div class="comment-box">Референс</div>
+            </div></div><h2>03_V. Tanya</h2><div class='gallery'>
+            <div class="gallery-item">
+                <a href="assets/user5258550559/03_V_Tanya_1.jpg" data-fancybox="all_gallery" data-caption="03_V. Tanya | 03_V_Tanya_1.jpg">
+                    <img src="assets/user5258550559/03_V_Tanya_1.jpg" loading="lazy">
+                </a>
+                <div class="tag-badge">03_V_Tanya_1.jpg</div>
+                <button class="comment-toggle" type="button">💬 Показать комментарий</button><div class="comment-box">Здравствуйте, Олег Леонидович и Владимир Николаевич. Очень люблю ваши разборы, особенно когда слушаешь о своей работе, какое-то особенное чувство испытываю. И каждый раз волнительно. В этот раз присылаю Фрегат. Масло, 50х40. Мне нужно было именно фрегат нарисовать, поэтому без Пинтерест не обошлось. Но я немного изменила их картинку, кажется ии. Высылаю для сравнения. Хочется услышать ваше мнение. У меня сомнение вызывает фрегат. Вам не кажетс, что он собирается развалиться?</div>
+            </div>
+            <div class="gallery-item">
+                <a href="assets/user5258550559/03_V_Tanya_2.jpg" data-fancybox="all_gallery" data-caption="03_V. Tanya | 03_V_Tanya_2.jpg">
+                    <img src="assets/user5258550559/03_V_Tanya_2.jpg" loading="lazy">
+                </a>
+                <div class="tag-badge">03_V_Tanya_2.jpg</div>
+                <button class="comment-toggle" type="button">💬 Показать комментарий</button><div class="comment-box">это мой референс</div>
+            </div></div><h2>04_D. Контана /Елена Е/</h2><div class='gallery'>
+            <div class="gallery-item">
+                <a href="assets/user1062919638/04_D_Контана _Елена Е__1.jpg" data-fancybox="all_gallery" data-caption="04_D. Контана /Елена Е/ | 04_D_Контана _Елена Е__1.jpg">
+                    <img src="assets/user1062919638/04_D_Контана _Елена Е__1.jpg" loading="lazy">
+                </a>
+                <div class="tag-badge">04_D_Контана _Елена Е__1.jpg</div>
+                <button class="comment-toggle" type="button">💬 Показать комментарий</button><div class="comment-box">С добрым осенним днём, любимая &quot;Художка&quot;!
+Отправляю прошлогоднюю работу, т к. сейчас нет возможности &quot;наваять что-то свеженькое&quot;🤗, хотя задумок море.
+Работа &quot;Измайловский парк&quot; выполнена в смешанной технике, акварель+тушь, А3 ❤️❤️❤️</div>
+            </div></div><h2>04_V. Татьяна</h2><div class='gallery'>
+            <div class="gallery-item">
+                <a href="assets/user1946875530/04_V_Татьяна_1.jpg" data-fancybox="all_gallery" data-caption="04_V. Татьяна | 04_V_Татьяна_1.jpg">
+                    <img src="assets/user1946875530/04_V_Татьяна_1.jpg" loading="lazy">
+                </a>
+                <div class="tag-badge">04_V_Татьяна_1.jpg</div>
+                <button class="comment-toggle" type="button">💬 Показать комментарий</button><div class="comment-box">Начинала работу на пленере. Заканчивала дома по фотографии. Почувствовала разницу.
+Бумага, гуашь, А4.</div>
+            </div></div><h2>05_D. Татьяна</h2><div class='gallery'>
+            <div class="gallery-item">
+                <a href="assets/user6271502728/05_D_Татьяна_1.jpg" data-fancybox="all_gallery" data-caption="05_D. Татьяна | 05_D_Татьяна_1.jpg">
+                    <img src="assets/user6271502728/05_D_Татьяна_1.jpg" loading="lazy">
+                </a>
+                <div class="tag-badge">05_D_Татьяна_1.jpg</div>
+                
+            </div></div><h2>05_V. Боровик Дмитрий</h2><div class='gallery'>
+            <div class="gallery-item">
+                <a href="assets/user520226815/05_V_Боровик Дмитрий_1.jpg" data-fancybox="all_gallery" data-caption="05_V. Боровик Дмитрий | 05_V_Боровик Дмитрий_1.jpg">
+                    <img src="assets/user520226815/05_V_Боровик Дмитрий_1.jpg" loading="lazy">
+                </a>
+                <div class="tag-badge">05_V_Боровик Дмитрий_1.jpg</div>
+                <button class="comment-toggle" type="button">💬 Показать комментарий</button><div class="comment-box">Добрый вечер, Жавер не присылал, рассмотрите пожалуйста, мою работу, Спасибо🙏</div>
+            </div></div><h2>06_D. Irina</h2><div class='gallery'>
+            <div class="gallery-item">
+                <a href="assets/user452970646/06_D_Irina_1.jpg" data-fancybox="all_gallery" data-caption="06_D. Irina | 06_D_Irina_1.jpg">
+                    <img src="assets/user452970646/06_D_Irina_1.jpg" loading="lazy">
+                </a>
+                <div class="tag-badge">06_D_Irina_1.jpg</div>
+                <button class="comment-toggle" type="button">💬 Показать комментарий</button><div class="comment-box">Опять я побоялась не успеть и переуспела)
+Добрый день, дорогие наставники &quot;Художки&quot;! Отправляю старую работу. Очень просят её подарить, а мне стыдно! Пытаюсь объяснить, что нарушена перспектива, плановость и вижу ещё миллион ошибок. Может, возможно эту работу сделать сильно декоративной, чтобы подумали, что это не мои кривые ручки так сделали, а я просто &quot; художник, я так вижу&quot;. Помогите не опозориться и не изображать из себя жадину. Предлагала другие свои каляки (более удачные) , но просят только эту(
+Это акварель, бумага для акварели А4. Просто рисовала настроение и тренироваласть рисовать акварелью, не расчитывая на то, что кому-то понадобится моя каляка.</div>
+            </div></div><h2>06_V. Tata</h2><div class='gallery'>
+            <div class="gallery-item">
+                <a href="assets/user857555518/06_V_Tata_1.jpg" data-fancybox="all_gallery" data-caption="06_V. Tata | 06_V_Tata_1.jpg">
+                    <img src="assets/user857555518/06_V_Tata_1.jpg" loading="lazy">
+                </a>
+                <div class="tag-badge">06_V_Tata_1.jpg</div>
+                <button class="comment-toggle" type="button">💬 Показать комментарий</button><div class="comment-box">Забыла написать, это масло на холсте, холст оказался очень тонким, к сожалению, грунтовку накладывала акриловым гиунтос, но он очень тянет краску. Размер 50х70. Спасибо за Художку!</div>
+            </div></div><h2>07_D. Li Lik</h2><div class='gallery'>
+            <div class="gallery-item">
+                <a href="assets/user7722272857/07_D_Li Lik_1.jpg" data-fancybox="all_gallery" data-caption="07_D. Li Lik | 07_D_Li Lik_1.jpg">
+                    <img src="assets/user7722272857/07_D_Li Lik_1.jpg" loading="lazy">
+                </a>
+                <div class="tag-badge">07_D_Li Lik_1.jpg</div>
+                <button class="comment-toggle" type="button">💬 Показать комментарий</button><div class="comment-box">Ух здорово,спасибо.</div>
+            </div></div><h2>07_V. Екатерина С</h2><div class='gallery'>
+            <div class="gallery-item">
+                <a href="assets/user568969780/07_V_Екатерина С_1.jpg" data-fancybox="all_gallery" data-caption="07_V. Екатерина С | 07_V_Екатерина С_1.jpg">
+                    <img src="assets/user568969780/07_V_Екатерина С_1.jpg" loading="lazy">
+                </a>
+                <div class="tag-badge">07_V_Екатерина С_1.jpg</div>
+                <button class="comment-toggle" type="button">💬 Показать комментарий</button><div class="comment-box">Здравствуйте, пересылаю вам работу от Татьяны С. Ее комментарий: Здравствуйте уважаемые Олег Леонидович и Владимир Николаевич. Всегда мучаюсь с выбором что именно отправить на разбор, Ну вот только закончила Натюрморт с натуры А3 акварель. Темперамент в нем отсутствует! Думаю  Вы найдете чего ещё ему пожелать. Спасибо!</div>
+            </div></div><h2>08_D. ieva</h2><div class='gallery'>
+            <div class="gallery-item">
+                <a href="assets/user1400016793/08_D_ieva_1.jpg" data-fancybox="all_gallery" data-caption="08_D. ieva | 08_D_ieva_1.jpg">
+                    <img src="assets/user1400016793/08_D_ieva_1.jpg" loading="lazy">
+                </a>
+                <div class="tag-badge">08_D_ieva_1.jpg</div>
+                <button class="comment-toggle" type="button">💬 Показать комментарий</button><div class="comment-box">Здраствуйте! Эта картина маслом, незаконченная. Я к ней ещё работаю. Пожалуйста подскажите, что изменить или исправить. Большое спасибо!</div>
+            </div></div><h2>08_V. Марина</h2><div class='gallery'>
+            <div class="gallery-item">
+                <a href="assets/user1394875478/08_V_Марина_1.jpg" data-fancybox="all_gallery" data-caption="08_V. Марина | 08_V_Марина_1.jpg">
+                    <img src="assets/user1394875478/08_V_Марина_1.jpg" loading="lazy">
+                </a>
+                <div class="tag-badge">08_V_Марина_1.jpg</div>
+                <button class="comment-toggle" type="button">💬 Показать комментарий</button><div class="comment-box">Здравствуй, любимая Художка!!!  Розы рисовала по картине из интернета. Что-то не нравится, не могу понять. Холст 40*50, масло. С радостью буду ждать вашего разбора. Картины,которые я направляла на разборы раньше и поправила, сразу стали выглядеть очень круто!!!! Спасибо за вашу помощь!</div>
+            </div></div><h2>09_D. Tatyana Mamaeva</h2><div class='gallery'>
+            <div class="gallery-item">
+                <a href="assets/user436386940/09_D_Tatyana Mamaeva_1.jpg" data-fancybox="all_gallery" data-caption="09_D. Tatyana Mamaeva | 09_D_Tatyana Mamaeva_1.jpg">
+                    <img src="assets/user436386940/09_D_Tatyana Mamaeva_1.jpg" loading="lazy">
+                </a>
+                <div class="tag-badge">09_D_Tatyana Mamaeva_1.jpg</div>
+                <button class="comment-toggle" type="button">💬 Показать комментарий</button><div class="comment-box">Здравствуйте, Олег Леонидович и Владимир Николаевич 😊 Как раз к разбору посылаю незаконченную работу, главный вопрос, куда поместить пятый пион? 😁 История такова: мама привезла из сада вот этот букет, пионы и жасмин, срочно я поставила этот натюрморт, так как лепестки падали, вечернее солнце уходило😁 Кстати, ветки жасмина тоже еще не закончены)) холст 50*70, масло. Переработку моего референса сделал ИИ, я пошлю фото. 🤗Очень жду Ваших ценных рекомендаций 🙏 🤗</div>
+            </div>
+            <div class="gallery-item">
+                <a href="assets/user436386940/09_D_Tatyana Mamaeva_2.jpg" data-fancybox="all_gallery" data-caption="09_D. Tatyana Mamaeva | 09_D_Tatyana Mamaeva_2.jpg">
+                    <img src="assets/user436386940/09_D_Tatyana Mamaeva_2.jpg" loading="lazy">
+                </a>
+                <div class="tag-badge">09_D_Tatyana Mamaeva_2.jpg</div>
+                <button class="comment-toggle" type="button">💬 Показать комментарий</button><div class="comment-box">Референсы к работе, Татьяна Мамаева. Надеюсь,  правильно послала?😁</div>
+            </div>
+            <div class="gallery-item">
+                <a href="assets/user436386940/09_D_Tatyana Mamaeva_3.jpg" data-fancybox="all_gallery" data-caption="09_D. Tatyana Mamaeva | 09_D_Tatyana Mamaeva_3.jpg">
+                    <img src="assets/user436386940/09_D_Tatyana Mamaeva_3.jpg" loading="lazy">
+                </a>
+                <div class="tag-badge">09_D_Tatyana Mamaeva_3.jpg</div>
+                
+            </div></div><h2>09_V. Alina Grigorjeva</h2><div class='gallery'>
+            <div class="gallery-item">
+                <a href="assets/user5619121878/09_V_Alina Grigorjeva_1.jpg" data-fancybox="all_gallery" data-caption="09_V. Alina Grigorjeva | 09_V_Alina Grigorjeva_1.jpg">
+                    <img src="assets/user5619121878/09_V_Alina Grigorjeva_1.jpg" loading="lazy">
+                </a>
+                <div class="tag-badge">09_V_Alina Grigorjeva_1.jpg</div>
+                
+            </div>
+            <div class="gallery-item">
+                <a href="assets/user5619121878/09_V_Alina Grigorjeva_2.jpg" data-fancybox="all_gallery" data-caption="09_V. Alina Grigorjeva | 09_V_Alina Grigorjeva_2.jpg">
+                    <img src="assets/user5619121878/09_V_Alina Grigorjeva_2.jpg" loading="lazy">
+                </a>
+                <div class="tag-badge">09_V_Alina Grigorjeva_2.jpg</div>
+                <button class="comment-toggle" type="button">💬 Показать комментарий</button><div class="comment-box">Здравствуйте! «Старая мельница», холст 40 на 50, масло (работа по фото подруги). Это моя вторая работа маслом, до этого пользовалась акрилом. Надо сказать, очень понравилось работать маслом! Это уже седьмая моя работа, присланная на разбор (первой был замок, как вырезанный из картона 😂). Очень благодарна за ваш труд ❤️, продолжаю учиться по вашим видеоразборам. Эта работа уже побывала на разборе народных художников, они мне очень помогли, за это им отдельное спасибо ❤️. Буду благодарна за подсказки.</div>
+            </div></div><h2>10_D. In The Shadows</h2><div class='gallery'>
+            <div class="gallery-item">
+                <a href="assets/user6554428600/10_D_In The Shadows_1.jpg" data-fancybox="all_gallery" data-caption="10_D. In The Shadows | 10_D_In The Shadows_1.jpg">
+                    <img src="assets/user6554428600/10_D_In The Shadows_1.jpg" loading="lazy">
+                </a>
+                <div class="tag-badge">10_D_In The Shadows_1.jpg</div>
+                
+            </div>
+            <div class="gallery-item">
+                <a href="assets/user6554428600/10_D_In The Shadows_2.jpg" data-fancybox="all_gallery" data-caption="10_D. In The Shadows | 10_D_In The Shadows_2.jpg">
+                    <img src="assets/user6554428600/10_D_In The Shadows_2.jpg" loading="lazy">
+                </a>
+                <div class="tag-badge">10_D_In The Shadows_2.jpg</div>
+                <button class="comment-toggle" type="button">💬 Показать комментарий</button><div class="comment-box">Добрый день . Писала со своей фотографии. Размер: 20/25.  Подскажите, как исправить , над чем поработать, чтобы получилось ближе к реализму. Благодарю вас обоих.
+Референс.</div>
+            </div></div><h2>10_V. Онипко Людмила</h2><div class='gallery'>
+            <div class="gallery-item">
+                <a href="assets/user1647516919/10_V_Онипко Людмила_1.jpg" data-fancybox="all_gallery" data-caption="10_V. Онипко Людмила | 10_V_Онипко Людмила_1.jpg">
+                    <img src="assets/user1647516919/10_V_Онипко Людмила_1.jpg" loading="lazy">
+                </a>
+                <div class="tag-badge">10_V_Онипко Людмила_1.jpg</div>
+                <button class="comment-toggle" type="button">💬 Показать комментарий</button><div class="comment-box">Акварель, миниатюра А5. 
+Тропическая стеклянная лягушка. Лист под лягушкой не ядрючий, а приглушенно зелёный. Фото исказило цвет. 
+Ставила себе задачу изобразить воду, но не получилось, потому что не умею, а на референсе вокруг лягушки просто темный фон.</div>
+            </div>
+            <div class="gallery-item">
+                <a href="assets/user1647516919/10_V_Онипко Людмила_2.jpg" data-fancybox="all_gallery" data-caption="10_V. Онипко Людмила | 10_V_Онипко Людмила_2.jpg">
+                    <img src="assets/user1647516919/10_V_Онипко Людмила_2.jpg" loading="lazy">
+                </a>
+                <div class="tag-badge">10_V_Онипко Людмила_2.jpg</div>
+                
+            </div></div><h2>11_D. Natalia</h2><div class='gallery'>
+            <div class="gallery-item">
+                <a href="assets/user1290627275/11_D_Natalia_1.jpg" data-fancybox="all_gallery" data-caption="11_D. Natalia | 11_D_Natalia_1.jpg">
+                    <img src="assets/user1290627275/11_D_Natalia_1.jpg" loading="lazy">
+                </a>
+                <div class="tag-badge">11_D_Natalia_1.jpg</div>
+                <button class="comment-toggle" type="button">💬 Показать комментарий</button><div class="comment-box">Здравствуйте! Написала 2 быстрых этюда на состояние с балкона с разницей минут в 40. Формат каждого этюда где-то 15 на 29 см. Вторая половина дня. Это один и тот же мотив, просто во 2м варианте здания приблизила. Пожалуйста, дайте комментарии по любому из них, по какому сочтете нужным. Смотрю Ваши разборы, очень много полезного для меня. Это очень здорово, что Вы и такая инициатива есть в сети!! Заранее спасибо за разбор!</div>
+            </div></div><h2>11_V. Елена</h2><div class='gallery'>
+            <div class="gallery-item">
+                <a href="assets/user8433220760/11_V_Елена_1.jpg" data-fancybox="all_gallery" data-caption="11_V. Елена | 11_V_Елена_1.jpg">
+                    <img src="assets/user8433220760/11_V_Елена_1.jpg" loading="lazy">
+                </a>
+                <div class="tag-badge">11_V_Елена_1.jpg</div>
+                <button class="comment-toggle" type="button">💬 Показать комментарий</button><div class="comment-box">Добрый день, Олег Леонидович и Владимир Николаевич! Этюд, Михайловский замок, СПб, масло. Спасибо за разбор и советы! Учусь по Вашим видео.</div>
+            </div></div><h2>12_D. Ольга Л</h2><div class='gallery'>
+            <div class="gallery-item">
+                <a href="assets/user1271076025/12_D_Ольга Л_1.jpg" data-fancybox="all_gallery" data-caption="12_D. Ольга Л | 12_D_Ольга Л_1.jpg">
+                    <img src="assets/user1271076025/12_D_Ольга Л_1.jpg" loading="lazy">
+                </a>
+                <div class="tag-badge">12_D_Ольга Л_1.jpg</div>
+                <button class="comment-toggle" type="button">💬 Показать комментарий</button><div class="comment-box">Хм 40х50. Здравствуйте, Олег Леонидович и Владимир Николаевич! Отправляю на разбор зимний пейзаж. Писала по своему фото. Хотелось передать состояние первого весеннего солнца в начале марта и радости от скорого окончания зимы. Не совсем довольна результатом. Буду рада, если укажите на мои ошибки. Благодарю!</div>
+            </div></div><h2>12_V. Альфия</h2><div class='gallery'>
+            <div class="gallery-item">
+                <a href="assets/user1288668674/12_V_Альфия_1.jpg" data-fancybox="all_gallery" data-caption="12_V. Альфия | 12_V_Альфия_1.jpg">
+                    <img src="assets/user1288668674/12_V_Альфия_1.jpg" loading="lazy">
+                </a>
+                <div class="tag-badge">12_V_Альфия_1.jpg</div>
+                <button class="comment-toggle" type="button">💬 Показать комментарий</button><div class="comment-box">Здравствуйте Олег Леонидович и Владимир Николаевич. Акварель, а4.Этюд с натуры вечернего неба, пыталась передать цвет облаков. За эти несколько минут включилось уличное освещение  и его туда же 😉</div>
+            </div></div><h2>13_D. Ольга G</h2><div class='gallery'>
+            <div class="gallery-item">
+                <a href="assets/user1369400077/13_D_Ольга G_1.jpg" data-fancybox="all_gallery" data-caption="13_D. Ольга G | 13_D_Ольга G_1.jpg">
+                    <img src="assets/user1369400077/13_D_Ольга G_1.jpg" loading="lazy">
+                </a>
+                <div class="tag-badge">13_D_Ольга G_1.jpg</div>
+                <button class="comment-toggle" type="button">💬 Показать комментарий</button><div class="comment-box">Здравствуйте! Очень хотелось бы узнать Ваше мнение, Олег Леонидович, о работе. Акварель, формат а3, целлюлоза. Работа по моей фотографии из Переславля-Залесского. Вот мне в ней чего-то не хватает, а чего-не могу понять. С удовольствием всегда смотрю разборы работ на каналае и хочу сказать спасибо большое за Ваш труд, профессионализм  и желаю процветания вашему каналу.</div>
+            </div></div><h2>13_V. Елена Богданова</h2><div class='gallery'>
+            <div class="gallery-item">
+                <a href="assets/user5154548151/13_V_Елена Богданова_1.jpg" data-fancybox="all_gallery" data-caption="13_V. Елена Богданова | 13_V_Елена Богданова_1.jpg">
+                    <img src="assets/user5154548151/13_V_Елена Богданова_1.jpg" loading="lazy">
+                </a>
+                <div class="tag-badge">13_V_Елена Богданова_1.jpg</div>
+                <button class="comment-toggle" type="button">💬 Показать комментарий</button><div class="comment-box">Здравствуйте, Олег Леонидович и Владимир Николаевич! Благодарю вас за терпение и такие уникальные разборы работ. На этот раз я с портретом моего второго подопечного. Первая чихуашка Нури была в работе &quot;ГавкОло ЧихусмАни&quot;, помните?) 
+Сейчас-портрет моего чихуахуа Персика, формат А3, пл. 200, масляные карандаши+гелевые ручки. Сюжет родился за пару минут. Рисовала дольше 😆 Работа называется &quot;Я-Первый&quot;, это полностью отображает характер моего Персюхи. На картине он сидит на синем троне(спинка) и купается в лучах любви. Не пыталась нарисовать фотокопию по внешнему виду, задача была передать характер. Получилось☺️ Он везде первый и ему всё надо! Фото модели прилагаю. И да-у него ореховые глаза. Высылаю два варианта одной работы-на солнце днём и без прямого солнца (оба фото на балконе). Я не знаю, какая цветопередача у вас и видно ли контраст и рефлексы.  Благодарю, мира и здоровья. С уважением, Елена БОгданова.</div>
+            </div>
+            <div class="gallery-item">
+                <a href="assets/user5154548151/13_V_Елена Богданова_2.jpg" data-fancybox="all_gallery" data-caption="13_V. Елена Богданова | 13_V_Елена Богданова_2.jpg">
+                    <img src="assets/user5154548151/13_V_Елена Богданова_2.jpg" loading="lazy">
+                </a>
+                <div class="tag-badge">13_V_Елена Богданова_2.jpg</div>
+                
+            </div>
+            <div class="gallery-item">
+                <a href="assets/user5154548151/13_V_Елена Богданова_3.jpg" data-fancybox="all_gallery" data-caption="13_V. Елена Богданова | 13_V_Елена Богданова_3.jpg">
+                    <img src="assets/user5154548151/13_V_Елена Богданова_3.jpg" loading="lazy">
+                </a>
+                <div class="tag-badge">13_V_Елена Богданова_3.jpg</div>
+                
+            </div>
+            <div class="gallery-item">
+                <a href="assets/user5154548151/13_V_Елена Богданова_4.jpg" data-fancybox="all_gallery" data-caption="13_V. Елена Богданова | 13_V_Елена Богданова_4.jpg">
+                    <img src="assets/user5154548151/13_V_Елена Богданова_4.jpg" loading="lazy">
+                </a>
+                <div class="tag-badge">13_V_Елена Богданова_4.jpg</div>
+                <button class="comment-toggle" type="button">💬 Показать комментарий</button><div class="comment-box">Лидия , я переслала Вашу работу в &quot;Приём работ&quot;. Здесь ее не увидят! У Вас красивая работа.</div>
+            </div>
+            <div class="gallery-item">
+                <a href="assets/user5154548151/13_V_Елена Богданова_5.jpg" data-fancybox="all_gallery" data-caption="13_V. Елена Богданова | 13_V_Елена Богданова_5.jpg">
+                    <img src="assets/user5154548151/13_V_Елена Богданова_5.jpg" loading="lazy">
+                </a>
+                <div class="tag-badge">13_V_Елена Богданова_5.jpg</div>
+                <button class="comment-toggle" type="button">💬 Показать комментарий</button><div class="comment-box">Пожалуйста 💛🩷🩵</div>
+            </div></div><h2>14_D. Ludmila Andenova (Андёнова)</h2><div class='gallery'>
+            <div class="gallery-item">
+                <a href="assets/user1735723164/14_D_Ludmila Andenova (Андёнова)_1.jpg" data-fancybox="all_gallery" data-caption="14_D. Ludmila Andenova (Андёнова) | 14_D_Ludmila Andenova (Андёнова)_1.jpg">
+                    <img src="assets/user1735723164/14_D_Ludmila Andenova (Андёнова)_1.jpg" loading="lazy">
+                </a>
+                <div class="tag-badge">14_D_Ludmila Andenova (Андёнова)_1.jpg</div>
+                
+            </div>
+            <div class="gallery-item">
+                <a href="assets/user1735723164/14_D_Ludmila Andenova (Андёнова)_2.jpg" data-fancybox="all_gallery" data-caption="14_D. Ludmila Andenova (Андёнова) | 14_D_Ludmila Andenova (Андёнова)_2.jpg">
+                    <img src="assets/user1735723164/14_D_Ludmila Andenova (Андёнова)_2.jpg" loading="lazy">
+                </a>
+                <div class="tag-badge">14_D_Ludmila Andenova (Андёнова)_2.jpg</div>
+                
+            </div>
+            <div class="gallery-item">
+                <a href="assets/user1735723164/14_D_Ludmila Andenova (Андёнова)_3.jpg" data-fancybox="all_gallery" data-caption="14_D. Ludmila Andenova (Андёнова) | 14_D_Ludmila Andenova (Андёнова)_3.jpg">
+                    <img src="assets/user1735723164/14_D_Ludmila Andenova (Андёнова)_3.jpg" loading="lazy">
+                </a>
+                <div class="tag-badge">14_D_Ludmila Andenova (Андёнова)_3.jpg</div>
+                <button class="comment-toggle" type="button">💬 Показать комментарий</button><div class="comment-box">Здравствуйте, уважаемая «Художка»! Я опять к вам на разбор. Это новая работа маслом 40х50 по этюду с натуры. «Крутицкое подворье. Москва». Хотелось бы довести ее до определенной завершенности. Помогите, пожалуйста, советом. Уважаю и прислушиваюсь к Вашему мнению! Заранее благодарю!</div>
+            </div></div><h2>14_V. Наталья К.</h2><div class='gallery'>
+            <div class="gallery-item">
+                <a href="assets/user5036278950/14_V_Наталья К._1.jpg" data-fancybox="all_gallery" data-caption="14_V. Наталья К. | 14_V_Наталья К._1.jpg">
+                    <img src="assets/user5036278950/14_V_Наталья К._1.jpg" loading="lazy">
+                </a>
+                <div class="tag-badge">14_V_Наталья К._1.jpg</div>
+                <button class="comment-toggle" type="button">💬 Показать комментарий</button><div class="comment-box">Здравствуйте, многоуважаемые Олег Леонидович и Владимир Николаевич!!!Передаю вам большой привет из солнечной Греции! И хочу сказать вам огромное спасибо за вашу неоценимую помощь и те знания, которыми вы делитесь.
+Прошу ваш разбор и свежий взгляд со стороны профессионалов. Работа выполнена маслом, на данный момент она не закончена. Сюжет из греческой мифологии — «Леда и лебедь».
+Процесс застопорился, не знаю, как двигаться дальше. Чувствую, что композиции или деталям чего-то не хватает, но глаз замылился. 
+Подскажите, пожалуйста, что нужно исправить или добавить, чтобы работа выглядела завершенной и цельной?
+Буду очень благодарна за конструктивную критику и советы по дальнейшим шагам! 
+Заранее благодарю!!!!
+Ваша благодарная ученица из худклуба, Наталья 💖💖💖💖💖</div>
+            </div></div><h2>15_D. Oksana</h2><div class='gallery'>
+            <div class="gallery-item">
+                <a href="assets/user538171895/15_D_Oksana_1.jpg" data-fancybox="all_gallery" data-caption="15_D. Oksana | 15_D_Oksana_1.jpg">
+                    <img src="assets/user538171895/15_D_Oksana_1.jpg" loading="lazy">
+                </a>
+                <div class="tag-badge">15_D_Oksana_1.jpg</div>
+                <button class="comment-toggle" type="button">💬 Показать комментарий</button><div class="comment-box">Оксана Баталова
+«Давай дружить»
+бумага, акварель, 27х37 см
+2026 год 
+
+Здравствуйте, Олег и Владимир! Мне очень нравятся ваши разборы, спасибо за них👍
+Нарисовала свою ещё маленькую дочку по фото. Фото было сделано в контактном зоопарке, там было много козлят и они окружили дочку, а она вся сжалась, зажмурилась и смеялась😝
+Благодарю за разбор!</div>
+            </div></div><h2>15_V. Катерина Прохорова</h2><div class='gallery'>
+            <div class="gallery-item">
+                <a href="assets/user700922983/15_V_Катерина Прохорова_1.jpg" data-fancybox="all_gallery" data-caption="15_V. Катерина Прохорова | 15_V_Катерина Прохорова_1.jpg">
+                    <img src="assets/user700922983/15_V_Катерина Прохорова_1.jpg" loading="lazy">
+                </a>
+                <div class="tag-badge">15_V_Катерина Прохорова_1.jpg</div>
+                
+            </div>
+            <div class="gallery-item">
+                <a href="assets/user700922983/15_V_Катерина Прохорова_2.jpg" data-fancybox="all_gallery" data-caption="15_V. Катерина Прохорова | 15_V_Катерина Прохорова_2.jpg">
+                    <img src="assets/user700922983/15_V_Катерина Прохорова_2.jpg" loading="lazy">
+                </a>
+                <div class="tag-badge">15_V_Катерина Прохорова_2.jpg</div>
+                
+            </div>
+            <div class="gallery-item">
+                <a href="assets/user700922983/15_V_Катерина Прохорова_3.jpg" data-fancybox="all_gallery" data-caption="15_V. Катерина Прохорова | 15_V_Катерина Прохорова_3.jpg">
+                    <img src="assets/user700922983/15_V_Катерина Прохорова_3.jpg" loading="lazy">
+                </a>
+                <div class="tag-badge">15_V_Катерина Прохорова_3.jpg</div>
+                <button class="comment-toggle" type="button">💬 Показать комментарий</button><div class="comment-box">Тоже жду😅</div>
+            </div></div><h2>16_D. Елена Хмелева</h2><div class='gallery'>
+            <div class="gallery-item">
+                <a href="assets/user1114376569/16_D_Елена Хмелева_1.jpg" data-fancybox="all_gallery" data-caption="16_D. Елена Хмелева | 16_D_Елена Хмелева_1.jpg">
+                    <img src="assets/user1114376569/16_D_Елена Хмелева_1.jpg" loading="lazy">
+                </a>
+                <div class="tag-badge">16_D_Елена Хмелева_1.jpg</div>
+                <button class="comment-toggle" type="button">💬 Показать комментарий</button><div class="comment-box">Здравствуйте ,уважаемые Олег Леонидович и Владимир Николаевич! 
+Меня зовут Елена .Присылаю вам мою работу,размер А3, сухая пастель. Я написала ее , посмотрев мастер-класс, но не сразу ,а спустя какое-то время ,по памяти. Это второй раз ,когда я присылаю вам свою работу, первой была по мотивам Моне «Дама с зонтиком», заранее  благодарю за разбор !</div>
+            </div></div><h2>16_V. Света Света</h2><div class='gallery'>
+            <div class="gallery-item">
+                <a href="assets/user1316550896/16_V_Света Света_1.jpg" data-fancybox="all_gallery" data-caption="16_V. Света Света | 16_V_Света Света_1.jpg">
+                    <img src="assets/user1316550896/16_V_Света Света_1.jpg" loading="lazy">
+                </a>
+                <div class="tag-badge">16_V_Света Света_1.jpg</div>
+                <button class="comment-toggle" type="button">💬 Показать комментарий</button><div class="comment-box">&quot;Край,мій рідний край!&quot;  
+А4.Гуашь.
+Здравствуйте Олег Леонидович и Владимир Николаевич!
+Побывала в отпуске в Карпатах.
+Впечатлилась ,
+насладилась.Ностальгирую...
+Рисовала по своей фотографии.
+Рисунок уже побывал в совнархуде.
+Какие будут замечания?Спасибо!</div>
+            </div></div><h2>17_D. Нина Федоровна</h2><div class='gallery'>
+            <div class="gallery-item">
+                <a href="assets/user5251989301/17_D_Нина Федоровна_1.jpg" data-fancybox="all_gallery" data-caption="17_D. Нина Федоровна | 17_D_Нина Федоровна_1.jpg">
+                    <img src="assets/user5251989301/17_D_Нина Федоровна_1.jpg" loading="lazy">
+                </a>
+                <div class="tag-badge">17_D_Нина Федоровна_1.jpg</div>
+                <button class="comment-toggle" type="button">💬 Показать комментарий</button><div class="comment-box">Здравствуйте уважаемые Олег Леонидович и Владимир Николаевич! Благо дарю Вас за разбор работ! Это моя работа написаная до знакомства с художкой. Акрил.</div>
+            </div></div><h2>17_V. Кохтюк Лидия Lida.Kokhtyuk.78@mail.ru</h2><div class='gallery'>
+            <div class="gallery-item">
+                <a href="assets/user5337484023/17_V_Кохтюк Лидия Lida.Kokhtyuk.78@mail.ru_1.jpg" data-fancybox="all_gallery" data-caption="17_V. Кохтюк Лидия Lida.Kokhtyuk.78@mail.ru | 17_V_Кохтюк Лидия Lida.Kokhtyuk.78@mail.ru_1.jpg">
+                    <img src="assets/user5337484023/17_V_Кохтюк Лидия Lida.Kokhtyuk.78@mail.ru_1.jpg" loading="lazy">
+                </a>
+                <div class="tag-badge">17_V_Кохтюк Лидия Lida.Kokhtyuk.78@mail.ru_1.jpg</div>
+                <button class="comment-toggle" type="button">💬 Показать комментарий</button><div class="comment-box">🔥</div>
+            </div></div><h2>18_D. Talexiom</h2><div class='gallery'>
+            <div class="gallery-item">
+                <a href="assets/user8153506064/18_D_Talexiom_1.jpg" data-fancybox="all_gallery" data-caption="18_D. Talexiom | 18_D_Talexiom_1.jpg">
+                    <img src="assets/user8153506064/18_D_Talexiom_1.jpg" loading="lazy">
+                </a>
+                <div class="tag-badge">18_D_Talexiom_1.jpg</div>
+                <button class="comment-toggle" type="button">💬 Показать комментарий</button><div class="comment-box">Здравствуйте, Олег Леонидович и Владимир Николаевич.
+В ответ на вопрос Олега Леонидовича с прошлого разбора шлю изображение перспективной сетки, которую делал от руки.
+На вопрос Владимира Николаевича отвечаю, что под инструментом я имел в виду саму векторную графику: то есть векторная графика как инструмент. И её особенности не зависят от программы — она изначально разрабытавалась для дизайнерских задач.
+На разбор высылаю изображение храма апостола Андрея Первозванного на реке Вуокса в Карелии. Это последнее, что я сделал в векторе и оставил его — не даёт он размаху. (Есть и другие работы, но те совсем примитивные). Когда делал изображение пять лет назад, не обратил внимания на небо — вроде казалось обычным. А сейчас, когда собрался отправить на разбор, оно показалось каким‑то странным. По задумке оно должно быть сумеречным. Буду признателен и за прочие замечания и советы.</div>
+            </div>
+            <div class="gallery-item">
+                <a href="assets/user8153506064/18_D_Talexiom_2.jpg" data-fancybox="all_gallery" data-caption="18_D. Talexiom | 18_D_Talexiom_2.jpg">
+                    <img src="assets/user8153506064/18_D_Talexiom_2.jpg" loading="lazy">
+                </a>
+                <div class="tag-badge">18_D_Talexiom_2.jpg</div>
+                
+            </div></div><h2>18_V. Dima Rogozhnikov</h2><div class='gallery'>
+            <div class="gallery-item">
+                <a href="assets/user1592305055/18_V_Dima Rogozhnikov_1.jpg" data-fancybox="all_gallery" data-caption="18_V. Dima Rogozhnikov | 18_V_Dima Rogozhnikov_1.jpg">
+                    <img src="assets/user1592305055/18_V_Dima Rogozhnikov_1.jpg" loading="lazy">
+                </a>
+                <div class="tag-badge">18_V_Dima Rogozhnikov_1.jpg</div>
+                <button class="comment-toggle" type="button">💬 Показать комментарий</button><div class="comment-box">Здравствуйте, это моя ещё не законченная работа маслом на холсте. 35х50см. Буду благодарен за рекомендации</div>
+            </div></div><h2>19_D. Ландыш Жемчужная</h2><div class='gallery'>
+            <div class="gallery-item">
+                <a href="assets/user5989275639/19_D_Ландыш Жемчужная_1.jpg" data-fancybox="all_gallery" data-caption="19_D. Ландыш Жемчужная | 19_D_Ландыш Жемчужная_1.jpg">
+                    <img src="assets/user5989275639/19_D_Ландыш Жемчужная_1.jpg" loading="lazy">
+                </a>
+                <div class="tag-badge">19_D_Ландыш Жемчужная_1.jpg</div>
+                <button class="comment-toggle" type="button">💬 Показать комментарий</button><div class="comment-box">Уважаемые Олег Леонидович и Владимир Николаевич! Добрый день. 
+Прилагаю работу &quot;Тыквенное дело&quot;. 30 х 40. Картон. Масло. 
+
+
+Референс подготовила с помощью ИИ. Но особо его не придерживалась, так как он не понял, как я это вижу. 
+
+ Здесь по максимуму пыталась применить знания полученный именно из ваших разборов. Пыталась учесть и строение, и композицию и цветовое решение. Так же перекличку между цветами соседей. 
+Знаю, бутыль с краю параллельно раме, но более никуда не смогла красиво пристроить. Казалось круглый графин будет опять кругом вокруг круглых тыкв. 
+
+Знаю  тыквы не убедительны в объеме, беда - знаний не хватает. 
+
+Прошу сильно покритиковать, чтоб запомнила -много знаний, раз и на всегда. 
+
+Спасибо. 
+
+
+Ландыш. 2 года с кистями.</div>
+            </div>
+            <div class="gallery-item">
+                <a href="assets/user5989275639/19_D_Ландыш Жемчужная_2.jpg" data-fancybox="all_gallery" data-caption="19_D. Ландыш Жемчужная | 19_D_Ландыш Жемчужная_2.jpg">
+                    <img src="assets/user5989275639/19_D_Ландыш Жемчужная_2.jpg" loading="lazy">
+                </a>
+                <div class="tag-badge">19_D_Ландыш Жемчужная_2.jpg</div>
+                
+            </div></div><h2>19_V. Евгений</h2><div class='gallery'>
+            <div class="gallery-item">
+                <a href="assets/user1865827781/19_V_Евгений_1.jpg" data-fancybox="all_gallery" data-caption="19_V. Евгений | 19_V_Евгений_1.jpg">
+                    <img src="assets/user1865827781/19_V_Евгений_1.jpg" loading="lazy">
+                </a>
+                <div class="tag-badge">19_V_Евгений_1.jpg</div>
+                <button class="comment-toggle" type="button">💬 Показать комментарий</button><div class="comment-box">Добрый день! Направляю работу на разбор. Темпера, бумага (А3). По фото, которое сделал во время путешествия по Байкалу (референс прикладываю). Заранее благодарю за вашу оценку и рекомендации на будущее. С уважением, Евгений</div>
+            </div>
+            <div class="gallery-item">
+                <a href="assets/user1865827781/19_V_Евгений_2.jpg" data-fancybox="all_gallery" data-caption="19_V. Евгений | 19_V_Евгений_2.jpg">
+                    <img src="assets/user1865827781/19_V_Евгений_2.jpg" loading="lazy">
+                </a>
+                <div class="tag-badge">19_V_Евгений_2.jpg</div>
+                
+            </div></div><h2>20_D. Татьяна</h2><div class='gallery'>
+            <div class="gallery-item">
+                <a href="assets/user7843850501/20_D_Татьяна_1.jpg" data-fancybox="all_gallery" data-caption="20_D. Татьяна | 20_D_Татьяна_1.jpg">
+                    <img src="assets/user7843850501/20_D_Татьяна_1.jpg" loading="lazy">
+                </a>
+                <div class="tag-badge">20_D_Татьяна_1.jpg</div>
+                <button class="comment-toggle" type="button">💬 Показать комментарий</button><div class="comment-box">Неожиданная встреча на лесной опушке. Бумага для масла. Масло. А3. Уважаемые Олег Леонидович и Владимир Николаевич! Мой опыт рисования животного. Белое на зеленом😁. Уж очень впечатлила меня встреча в лесу с белоснежной козочкой. Она вышла из зарослей кустарника и крапивы, подсвеченная солнышком, и тоже, кажется, удивилась этой встрече. Остановилась на минутку, как мимолетное виденье,  и снова скрылась в лесу, ухватив листок крапивы. Хорошо, у меня телефон был наготове, успела сфотать. Ну а дома сразу за пару часов быстро нарисовала и козу  и свое впечатление. Готова доработать, исправив ошибки. Ноги не уместились, наверное, нужно больше в траве утопить? Очень жду ваших советов. Татьяна. Саратов</div>
+            </div>
+            <div class="gallery-item">
+                <a href="assets/user7843850501/20_D_Татьяна_2.jpg" data-fancybox="all_gallery" data-caption="20_D. Татьяна | 20_D_Татьяна_2.jpg">
+                    <img src="assets/user7843850501/20_D_Татьяна_2.jpg" loading="lazy">
+                </a>
+                <div class="tag-badge">20_D_Татьяна_2.jpg</div>
+                <button class="comment-toggle" type="button">💬 Показать комментарий</button><div class="comment-box">Это фото моей козочки. Рисовала и по памяти и по фото.</div>
+            </div></div><h2>20_V. Алёна Мудренок</h2><div class='gallery'>
+            <div class="gallery-item">
+                <a href="assets/user1436255054/20_V_Алёна Мудренок_1.jpg" data-fancybox="all_gallery" data-caption="20_V. Алёна Мудренок | 20_V_Алёна Мудренок_1.jpg">
+                    <img src="assets/user1436255054/20_V_Алёна Мудренок_1.jpg" loading="lazy">
+                </a>
+                <div class="tag-badge">20_V_Алёна Мудренок_1.jpg</div>
+                <button class="comment-toggle" type="button">💬 Показать комментарий</button><div class="comment-box">Добрый вечер,  Олег Леонидович. Это портрет турецкой актрисы, рисовала фломастерами в скетчбуке А4. Буду рада Вашим замечаниям. Хорошего Вам вечера</div>
+            </div></div><h2>21_D. Наталья Крупицкая</h2><div class='gallery'>
+            <div class="gallery-item">
+                <a href="assets/user7757390094/21_D_Наталья Крупицкая_1.jpg" data-fancybox="all_gallery" data-caption="21_D. Наталья Крупицкая | 21_D_Наталья Крупицкая_1.jpg">
+                    <img src="assets/user7757390094/21_D_Наталья Крупицкая_1.jpg" loading="lazy">
+                </a>
+                <div class="tag-badge">21_D_Наталья Крупицкая_1.jpg</div>
+                <button class="comment-toggle" type="button">💬 Показать комментарий</button><div class="comment-box">Дополнение к сообщению. Это дубовая аллея в роще Баума в Алматы. Свое фото.</div>
+            </div></div><h2>21_V. Алина</h2><div class='gallery'>
+            <div class="gallery-item">
+                <a href="assets/user7661609905/21_V_Алина_1.jpg" data-fancybox="all_gallery" data-caption="21_V. Алина | 21_V_Алина_1.jpg">
+                    <img src="assets/user7661609905/21_V_Алина_1.jpg" loading="lazy">
+                </a>
+                <div class="tag-badge">21_V_Алина_1.jpg</div>
+                <button class="comment-toggle" type="button">💬 Показать комментарий</button><div class="comment-box">Здравствуйте, Олег Леонидович и Владимир Николаевич. Спасибо за Ваши интересные разборы, за обучающий формат. Акварель по фото из интернета, а3, кажется, это Алтайский пейзаж.</div>
+            </div></div><h2>22_D. Алина Ю</h2><div class='gallery'>
+            <div class="gallery-item">
+                <a href="assets/user1484415865/22_D_Алина Ю_1.jpg" data-fancybox="all_gallery" data-caption="22_D. Алина Ю | 22_D_Алина Ю_1.jpg">
+                    <img src="assets/user1484415865/22_D_Алина Ю_1.jpg" loading="lazy">
+                </a>
+                <div class="tag-badge">22_D_Алина Ю_1.jpg</div>
+                <button class="comment-toggle" type="button">💬 Показать комментарий</button><div class="comment-box">Пора переименовать во &quot;Всемирный канал Художка&quot; А там и до Межгалактического недалеко 😁</div>
+            </div></div><h2>22_V. Галина П</h2><div class='gallery'>
+            <div class="gallery-item">
+                <a href="assets/user5672075138/22_V_Галина П_1_ДУБЛЬ.jpg" data-fancybox="all_gallery" data-caption="22_V. Галина П | 22_V_Галина П_1_ДУБЛЬ.jpg">
+                    <img src="assets/user5672075138/22_V_Галина П_1_ДУБЛЬ.jpg" loading="lazy">
+                </a>
+                <div class="tag-badge">22_V_Галина П_1_ДУБЛЬ.jpg</div>
+                <button class="comment-toggle" type="button">💬 Показать комментарий</button><div class="comment-box">Дополнение к набору для вина.Это моя первая работа акварелью.Далась очень трудно после акрила ,когда хочется писать более укрывисто и пастозно. Мне кажется,что не хватает солнечных бликов на столе. И не только. Посоветуйте,что можно дополнить.  С уважением, Галина П.</div>
+            </div>
+            <div class="gallery-item">
+                <a href="assets/user5672075138/22_V_Галина П_2_ДУБЛЬ.jpg" data-fancybox="all_gallery" data-caption="22_V. Галина П | 22_V_Галина П_2_ДУБЛЬ.jpg">
+                    <img src="assets/user5672075138/22_V_Галина П_2_ДУБЛЬ.jpg" loading="lazy">
+                </a>
+                <div class="tag-badge">22_V_Галина П_2_ДУБЛЬ.jpg</div>
+                <button class="comment-toggle" type="button">💬 Показать комментарий</button><div class="comment-box">Извините ! Ошиблась ,давно не посылала,забыла как это делается .Исправлюсь</div>
+            </div></div><h2>23_D. Татьяна Воронова</h2><div class='gallery'>
+            <div class="gallery-item">
+                <a href="assets/user8466138543/23_D_Татьяна Воронова_1.jpg" data-fancybox="all_gallery" data-caption="23_D. Татьяна Воронова | 23_D_Татьяна Воронова_1.jpg">
+                    <img src="assets/user8466138543/23_D_Татьяна Воронова_1.jpg" loading="lazy">
+                </a>
+                <div class="tag-badge">23_D_Татьяна Воронова_1.jpg</div>
+                <button class="comment-toggle" type="button">💬 Показать комментарий</button><div class="comment-box">Как здорово! Большая Вам благодарность🤝</div>
+            </div></div><h2>23_V. Nadia</h2><div class='gallery'>
+            <div class="gallery-item">
+                <a href="assets/user567924528/23_V_Nadia_1.jpg" data-fancybox="all_gallery" data-caption="23_V. Nadia | 23_V_Nadia_1.jpg">
+                    <img src="assets/user567924528/23_V_Nadia_1.jpg" loading="lazy">
+                </a>
+                <div class="tag-badge">23_V_Nadia_1.jpg</div>
+                <button class="comment-toggle" type="button">💬 Показать комментарий</button><div class="comment-box">Добрый день, дорогие Олег Леонидович и Владимир Николаевич. Отправляю вам свой незаконченный натюрморт. По-моему, складки красной драпировки - просто караул. Никак она у меня не получается. Наверное, потому что пишу не с натуры. Натюрморт начала писать зимой в изостудии, когда листья с рябины уже опали. Может, их всё-таки пририсовать?</div>
+            </div></div><h2>24_D. Nataliya</h2><div class='gallery'>
+            <div class="gallery-item">
+                <a href="assets/user799100338/24_D_Nataliya_1.jpg" data-fancybox="all_gallery" data-caption="24_D. Nataliya | 24_D_Nataliya_1.jpg">
+                    <img src="assets/user799100338/24_D_Nataliya_1.jpg" loading="lazy">
+                </a>
+                <div class="tag-badge">24_D_Nataliya_1.jpg</div>
+                <button class="comment-toggle" type="button">💬 Показать комментарий</button><div class="comment-box">И снова здравствуйте, наши уважаемые учителя.  Оцените, пожалуйста, портрет девочки. Спасибо большое вам❤️❤️❤️</div>
+            </div></div><h2>24_V. Рыбак Светлана Сергеевна</h2><div class='gallery'>
+            <div class="gallery-item">
+                <a href="assets/user5198184520/24_V_Рыбак Светлана Сергеевна_1.jpg" data-fancybox="all_gallery" data-caption="24_V. Рыбак Светлана Сергеевна | 24_V_Рыбак Светлана Сергеевна_1.jpg">
+                    <img src="assets/user5198184520/24_V_Рыбак Светлана Сергеевна_1.jpg" loading="lazy">
+                </a>
+                <div class="tag-badge">24_V_Рыбак Светлана Сергеевна_1.jpg</div>
+                <button class="comment-toggle" type="button">💬 Показать комментарий</button><div class="comment-box">Широка страна моя родная. Много в ней лесов, полей и рек. 
+И Художка вот не знает края, где не жил бы художник-человек! 
+❤️🎨❤️🎨❤️🎨 
+Олег Леонидович! Спасибо за отличный челлендж и за великолепный ролик! 🔥</div>
+            </div></div><h2>25_D. Aris Pogosyan</h2><div class='gallery'>
+            <div class="gallery-item">
+                <a href="assets/user7783272422/25_D_Aris Pogosyan_1.jpg" data-fancybox="all_gallery" data-caption="25_D. Aris Pogosyan | 25_D_Aris Pogosyan_1.jpg">
+                    <img src="assets/user7783272422/25_D_Aris Pogosyan_1.jpg" loading="lazy">
+                </a>
+                <div class="tag-badge">25_D_Aris Pogosyan_1.jpg</div>
+                <button class="comment-toggle" type="button">💬 Показать комментарий</button><div class="comment-box">Добрый день уважаемые наставники, прошу посоветовать как быть дальше, холст на два, 50*40 см, картина из серии «Духи леса», буду очень признателен.</div>
+            </div></div><h2>25_V. Татьяна</h2><div class='gallery'>
+            <div class="gallery-item">
+                <a href="assets/user6530792390/25_V_Татьяна_1.jpg" data-fancybox="all_gallery" data-caption="25_V. Татьяна | 25_V_Татьяна_1.jpg">
+                    <img src="assets/user6530792390/25_V_Татьяна_1.jpg" loading="lazy">
+                </a>
+                <div class="tag-badge">25_V_Татьяна_1.jpg</div>
+                <button class="comment-toggle" type="button">💬 Показать комментарий</button><div class="comment-box">Здравствуйте. Отправляю очередную свою работу. Холст 25*30 , акрил. Буду признательна за ваш отзыв. Заранее благодарю . С уважением , Татьяна.</div>
+            </div></div><h2>26_D. Ольга</h2><div class='gallery'>
+            <div class="gallery-item">
+                <a href="assets/user5198962300/26_D_Ольга_1.jpg" data-fancybox="all_gallery" data-caption="26_D. Ольга | 26_D_Ольга_1.jpg">
+                    <img src="assets/user5198962300/26_D_Ольга_1.jpg" loading="lazy">
+                </a>
+                <div class="tag-badge">26_D_Ольга_1.jpg</div>
+                <button class="comment-toggle" type="button">💬 Показать комментарий</button><div class="comment-box">Здравствуйте Олег Леонидович и Владимир Николаевич! Акварельная картинка вида из окна ночью. Очень захотелось передать ощущение хаоса, абсурда и гадких розовых всполыхов. Наверное, левый верх надо затемнить. Спасибо за разборы.</div>
+            </div></div><h2>26_V. Ирина</h2><div class='gallery'>
+            <div class="gallery-item">
+                <a href="assets/user1010289715/26_V_Ирина_1.jpg" data-fancybox="all_gallery" data-caption="26_V. Ирина | 26_V_Ирина_1.jpg">
+                    <img src="assets/user1010289715/26_V_Ирина_1.jpg" loading="lazy">
+                </a>
+                <div class="tag-badge">26_V_Ирина_1.jpg</div>
+                <button class="comment-toggle" type="button">💬 Показать комментарий</button><div class="comment-box">Олег Леонидович и Владимир Николаевич, здравствуйте! Работу начала несколько месяцев назад, сейчас хочу доделать. Помогите пожалуйста. Работа 20х15, холст на картоне, масло. Спасибо за Ваш труд!</div>
+            </div></div><h2>27_D. Катерина</h2><div class='gallery'>
+            <div class="gallery-item">
+                <a href="assets/user6941183413/27_D_Катерина_1.jpg" data-fancybox="all_gallery" data-caption="27_D. Катерина | 27_D_Катерина_1.jpg">
+                    <img src="assets/user6941183413/27_D_Катерина_1.jpg" loading="lazy">
+                </a>
+                <div class="tag-badge">27_D_Катерина_1.jpg</div>
+                <button class="comment-toggle" type="button">💬 Показать комментарий</button><div class="comment-box">Добрый день, дорогая художка! Это быстрый плинерный рисунок. Есть ли у меня ошибки? Заранее спасибо за разбор</div>
+            </div></div><h2>27_V. Игорь Владимирский</h2><div class='gallery'>
+            <div class="gallery-item">
+                <a href="assets/user674512449/27_V_Игорь Владимирский_1.jpg" data-fancybox="all_gallery" data-caption="27_V. Игорь Владимирский | 27_V_Игорь Владимирский_1.jpg">
+                    <img src="assets/user674512449/27_V_Игорь Владимирский_1.jpg" loading="lazy">
+                </a>
+                <div class="tag-badge">27_V_Игорь Владимирский_1.jpg</div>
+                <button class="comment-toggle" type="button">💬 Показать комментарий</button><div class="comment-box">Здравствуйте, Олег Леонидович и Владимир Николаевич! 🤝
+Вот он весь мой триптих наконец-то, я его завершил! 😅
+С первой его частью мы разобрались в прошлый раз и я по Вашим рекомендациям подправил его, как смог, большое Вам спасибо!
+Напомню смысл: люди тут входят в цифровые &quot;порталы&quot; в виртуальной реальности, чтобы погрузиться в определённые сегменты этого виртуального мира, где можно кайфовать как угодно. Они выбирают виды наслаждений.
+Во второй части они уже погружены: кто-то испытывает физические наслаждения (например, лопает гигантский торт, летает или плавает) - это красная зона. Кто-то испытывает больше эмоциональные или ментальные удовольствия, например строит романтические отношения или просто дружбу с нейросетями, хотя учитывая то, что в этом новом 10D мире присутствуют и вкусы и запахи и прикосновения, эти виды удовольствий могут перекликаться - например, можно пообниматься с ИИ в виртуальном пространстве.
+Тёмная область внизу и ярко золотая вверху - это развитие и деградация. И вот эти летающие фигурки людей, кто куда из них летит? Это элемент недосказанности, загадка для зрителя.
+Третья часть - это последствия всего этого... Люди в мыльных пузырях - это символ изоляции, одиночества от недостатка реального, живого общения. Люди сидят там в грустных позах и пытаются пробиться друг к другу через стены мыльных пузырей, но не могут...
+А внизу оазис, посреди которого шикарное застолье, где тренер по общению (профессия будущего - он заново будет учить людей общаться, возвращать их таким образом в реальность) разливает всем чай из большого глиняного чайника, реального, а не цифрового! Это как бы райский уголок посреди ада цифрового одиночества, надежда на то, что люди всегда будут ценить живое общение. 😍
+Это цельный триптих на одну тему, это одновременно и три и одна работа, поэтому надеюсь, Вы не посчитаете это за нарушение правил.
+Весь триптих называется &quot;Цифровой рай&quot;.
+Названия его частей:
+1. &quot;Выбор&quot; (или &quot;Искушение&quot;) 60×35 см.
+2. &quot;Погружение&quot; 60×60 см.
+3. &quot;Расплата и искупление&quot; 60×35 см.
+Холст/масло😊 как всегда пальцами, а линии делаю чаще всего ватными палочками)</div>
+            </div>
+            <div class="gallery-item">
+                <a href="assets/user674512449/27_V_Игорь Владимирский_2.jpg" data-fancybox="all_gallery" data-caption="27_V. Игорь Владимирский | 27_V_Игорь Владимирский_2.jpg">
+                    <img src="assets/user674512449/27_V_Игорь Владимирский_2.jpg" loading="lazy">
+                </a>
+                <div class="tag-badge">27_V_Игорь Владимирский_2.jpg</div>
+                
+            </div>
+            <div class="gallery-item">
+                <a href="assets/user674512449/27_V_Игорь Владимирский_3.jpg" data-fancybox="all_gallery" data-caption="27_V. Игорь Владимирский | 27_V_Игорь Владимирский_3.jpg">
+                    <img src="assets/user674512449/27_V_Игорь Владимирский_3.jpg" loading="lazy">
+                </a>
+                <div class="tag-badge">27_V_Игорь Владимирский_3.jpg</div>
+                
+            </div></div><h2>28_D. LENA</h2><div class='gallery'>
+            <div class="gallery-item">
+                <a href="assets/user1574096935/28_D_LENA_1.jpg" data-fancybox="all_gallery" data-caption="28_D. LENA | 28_D_LENA_1.jpg">
+                    <img src="assets/user1574096935/28_D_LENA_1.jpg" loading="lazy">
+                </a>
+                <div class="tag-badge">28_D_LENA_1.jpg</div>
+                <button class="comment-toggle" type="button">💬 Показать комментарий</button><div class="comment-box">Здравствуйте. Нашла ваш канал совсем недавно и хочу поблагодарить вас за те знания, которыми вы делитесь в ваших уроках и разборах картин. Огромное количество бесценной информации! Отдельное спасибо за очень тактичный и детальный, профессиональный разбор работ подписчиков. Желаю вашему каналу процветания, ахалай махалай🪄😁.
+Посылаю вам первый раз одну из моих последних  работ маслом. Мне нравятся  состояние незаконченности в работах но в то же время ощущение энергии и движениея, даже если это обыкновенный натюрморт.  Удалось ли мне передать это состояние в работе? Буду рада любыи советам и критике. Спасибо за ваш труд. С уважением Елена</div>
+            </div></div><h2>28_V. Art-info</h2><div class='gallery'>
+            <div class="gallery-item">
+                <a href="assets/user8408853640/28_V_Art-info_1.jpg" data-fancybox="all_gallery" data-caption="28_V. Art-info | 28_V_Art-info_1.jpg">
+                    <img src="assets/user8408853640/28_V_Art-info_1.jpg" loading="lazy">
+                </a>
+                <div class="tag-badge">28_V_Art-info_1.jpg</div>
+                <button class="comment-toggle" type="button">💬 Показать комментарий</button><div class="comment-box">Шалом тутти!
+
+На фото экспериментальная  выкраска-вымазка акриловых красок в блокноте А5, которая случайным образом составила композиционно- абстрактный сюжет.
+
+Хочу это переделать - воплотить в материал, достойный рамы.
+
+В чем сомнения и вопросы?:
+
+-Стоит ли оставить штрихи тушью?
+-Все ли цвета подружились, и как после этого чувствуют себя зайцы?
+-Оставить эти пятна квадратом в квадрате, или сделать основной силуэт кругом, ромбом или, например, перевёрнутым треугольником?
+- Как и где улучшить превалирование  масс, пульс композиции?
+- Может есть другие нюансы, готов мотать на ус.
+
+Рахмет-медвед.
+С ув Негоций.</div>
+            </div></div><h2>29_D. Александр</h2><div class='gallery'>
+            <div class="gallery-item">
+                <a href="assets/user187850273/29_D_Александр_1.jpg" data-fancybox="all_gallery" data-caption="29_D. Александр | 29_D_Александр_1.jpg">
+                    <img src="assets/user187850273/29_D_Александр_1.jpg" loading="lazy">
+                </a>
+                <div class="tag-badge">29_D_Александр_1.jpg</div>
+                <button class="comment-toggle" type="button">💬 Показать комментарий</button><div class="comment-box">Добрый день! На это раз прошу Вашей помощи с пленэрным этюдом. Это мои первые опыты с маслом —обычно писал акрилом, гуашью и акварелью.
+Самое непонятное на данный момент: как класть мазок, чтобы проявить и форму, и фактуру. Масло такое объемное по сравнению с акрилом и гуашью - каждое движение кистью остается!</div>
+            </div></div><h2>29_V. Наталья Ф</h2><div class='gallery'>
+            <div class="gallery-item">
+                <a href="assets/user1450235999/29_V_Наталья Ф_1.jpg" data-fancybox="all_gallery" data-caption="29_V. Наталья Ф | 29_V_Наталья Ф_1.jpg">
+                    <img src="assets/user1450235999/29_V_Наталья Ф_1.jpg" loading="lazy">
+                </a>
+                <div class="tag-badge">29_V_Наталья Ф_1.jpg</div>
+                <button class="comment-toggle" type="button">💬 Показать комментарий</button><div class="comment-box">Добрый вечер, Олег Леонидович и Владимир Николаевич! Прибежала с работы, а тут новый прием работ открыт! Присылаю свою работу масляной пастелью, формат А4. Недавно только открыла для себя этот материал и сразу влюбилась. &quot;Солнечный денёк в парке&quot;, пленэр. Буду рада услышать ваши замечания. И если можно, поделитесь секретами, как рисовать такими толстыми мелками мелкие детали. Спасибо</div>
+            </div></div><h2>30_D. Мария Сазонова</h2><div class='gallery'>
+            <div class="gallery-item">
+                <a href="assets/user547612654/30_D_Мария Сазонова_1.jpg" data-fancybox="all_gallery" data-caption="30_D. Мария Сазонова | 30_D_Мария Сазонова_1.jpg">
+                    <img src="assets/user547612654/30_D_Мария Сазонова_1.jpg" loading="lazy">
+                </a>
+                <div class="tag-badge">30_D_Мария Сазонова_1.jpg</div>
+                <button class="comment-toggle" type="button">💬 Показать комментарий</button><div class="comment-box">Как здорово, какая обширная география у нашей Художки! 
+Спасибо за чудесные эмоции с утра! И музыка потрясающая, такая лёгкая и чистая!</div>
+            </div></div><h2>30_V. Katrin</h2><div class='gallery'>
+            <div class="gallery-item">
+                <a href="assets/user5575294831/30_V_Katrin_1.jpg" data-fancybox="all_gallery" data-caption="30_V. Katrin | 30_V_Katrin_1.jpg">
+                    <img src="assets/user5575294831/30_V_Katrin_1.jpg" loading="lazy">
+                </a>
+                <div class="tag-badge">30_V_Katrin_1.jpg</div>
+                <button class="comment-toggle" type="button">💬 Показать комментарий</button><div class="comment-box">Здравствуйте Олег Леонидович и Владимир Николаевич!  Прошу провести разбор моей работы. Что можно улучшить в ней или что учесть в будущих работах? Работа выполнена акрилом, Формат А3. Заранее благодарю Вас.</div>
+            </div></div><h2>31_D. Маша</h2><div class='gallery'>
+            <div class="gallery-item">
+                <a href="assets/user1910564875/31_D_Маша_1.jpg" data-fancybox="all_gallery" data-caption="31_D. Маша | 31_D_Маша_1.jpg">
+                    <img src="assets/user1910564875/31_D_Маша_1.jpg" loading="lazy">
+                </a>
+                <div class="tag-badge">31_D_Маша_1.jpg</div>
+                <button class="comment-toggle" type="button">💬 Показать комментарий</button><div class="comment-box">Добрый день, Олег Леонидович и Владимир Николаевич! Пользуясь временно работающим ТГ,  отправляю на разбор свою летнюю акварельную работу. Интересуюсь всеми академическими основами, но также и именно акварельными техниками, это нечто особенное, конечно. Буду очень благодарна за замечания в целом и с точки зрения акварели. Пользовалась маскировочной жидкостью, но теперь думаю, что проще было бы без нее обойтись. Спасибо вам большое за учебные курсы, изучаю их, в также за эти замечательные разборы, которые уже очень многому научили.</div>
+            </div></div><h2>31_V. Лобанова Лидия</h2><div class='gallery'>
+            <div class="gallery-item">
+                <a href="assets/user1636132819/31_V_Лобанова Лидия_1.jpg" data-fancybox="all_gallery" data-caption="31_V. Лобанова Лидия | 31_V_Лобанова Лидия_1.jpg">
+                    <img src="assets/user1636132819/31_V_Лобанова Лидия_1.jpg" loading="lazy">
+                </a>
+                <div class="tag-badge">31_V_Лобанова Лидия_1.jpg</div>
+                <button class="comment-toggle" type="button">💬 Показать комментарий</button><div class="comment-box">О, Благодарю Вас, Елена❤️🙏</div>
+            </div></div><h2>32_D. Светлана</h2><div class='gallery'>
+            <div class="gallery-item">
+                <a href="assets/user7919377782/32_D_Светлана_1.jpg" data-fancybox="all_gallery" data-caption="32_D. Светлана | 32_D_Светлана_1.jpg">
+                    <img src="assets/user7919377782/32_D_Светлана_1.jpg" loading="lazy">
+                </a>
+                <div class="tag-badge">32_D_Светлана_1.jpg</div>
+                <button class="comment-toggle" type="button">💬 Показать комментарий</button><div class="comment-box">Хочу сделать такую открытку. Фон как обычно недоделанный. Посоветуйте, пожалуйста, делать ли более активный по цвету фон. И что ещё можно придумать в этой работе. Акварельные карандаши на формате А4</div>
+            </div></div><h2>32_V. падре</h2><div class='gallery'>
+            <div class="gallery-item">
+                <a href="assets/user375738072/32_V_падре_1.jpg" data-fancybox="all_gallery" data-caption="32_V. падре | 32_V_падре_1.jpg">
+                    <img src="assets/user375738072/32_V_падре_1.jpg" loading="lazy">
+                </a>
+                <div class="tag-badge">32_V_падре_1.jpg</div>
+                <button class="comment-toggle" type="button">💬 Показать комментарий</button><div class="comment-box">МДФ, грунт, акрил, 24*18. Набросок перешёл в нечто большее, буду рад любым замечаниям 😊</div>
+            </div></div><h2>33_D. Oksana Sana</h2><div class='gallery'>
+            <div class="gallery-item">
+                <a href="assets/user1945717236/33_D_Oksana Sana_1.jpg" data-fancybox="all_gallery" data-caption="33_D. Oksana Sana | 33_D_Oksana Sana_1.jpg">
+                    <img src="assets/user1945717236/33_D_Oksana Sana_1.jpg" loading="lazy">
+                </a>
+                <div class="tag-badge">33_D_Oksana Sana_1.jpg</div>
+                <button class="comment-toggle" type="button">💬 Показать комментарий</button><div class="comment-box">Работа акрилом 40×40 см.</div>
+            </div></div><h2>33_V. Kirill</h2><div class='gallery'>
+            <div class="gallery-item">
+                <a href="assets/user215303777/33_V_Kirill_1.jpg" data-fancybox="all_gallery" data-caption="33_V. Kirill | 33_V_Kirill_1.jpg">
+                    <img src="assets/user215303777/33_V_Kirill_1.jpg" loading="lazy">
+                </a>
+                <div class="tag-badge">33_V_Kirill_1.jpg</div>
+                <button class="comment-toggle" type="button">💬 Показать комментарий</button><div class="comment-box">Здравствуйте. 60*45, холст, масло. С картины И.И. Левитана - Золотая осень.</div>
+            </div></div><h2>34_D. Nastya_kul</h2><div class='gallery'>
+            <div class="gallery-item">
+                <a href="assets/user910633221/34_D_Nastya_kul_1.jpg" data-fancybox="all_gallery" data-caption="34_D. Nastya_kul | 34_D_Nastya_kul_1.jpg">
+                    <img src="assets/user910633221/34_D_Nastya_kul_1.jpg" loading="lazy">
+                </a>
+                <div class="tag-badge">34_D_Nastya_kul_1.jpg</div>
+                <button class="comment-toggle" type="button">💬 Показать комментарий</button><div class="comment-box">Здравствуйте! Разберите пожалуйста, не могу прописать почву и лапы петуха, и не знаю как аккуратно прописать небо вокруг него</div>
+            </div></div><h2>34_V. Владимир Юсупов</h2><div class='gallery'>
+            <div class="gallery-item">
+                <a href="assets/user1041961475/34_V_Владимир Юсупов_1.jpg" data-fancybox="all_gallery" data-caption="34_V. Владимир Юсупов | 34_V_Владимир Юсупов_1.jpg">
+                    <img src="assets/user1041961475/34_V_Владимир Юсупов_1.jpg" loading="lazy">
+                </a>
+                <div class="tag-badge">34_V_Владимир Юсупов_1.jpg</div>
+                <button class="comment-toggle" type="button">💬 Показать комментарий</button><div class="comment-box">Закрываемся? Все прислали?</div>
+            </div></div><h2>35_D. Марина</h2><div class='gallery'>
+            <div class="gallery-item">
+                <a href="assets/user1449312808/35_D_Марина_1.jpg" data-fancybox="all_gallery" data-caption="35_D. Марина | 35_D_Марина_1.jpg">
+                    <img src="assets/user1449312808/35_D_Марина_1.jpg" loading="lazy">
+                </a>
+                <div class="tag-badge">35_D_Марина_1.jpg</div>
+                <button class="comment-toggle" type="button">💬 Показать комментарий</button><div class="comment-box">Добрый день! Нарисовала мужу, он любитель поиграть в оркестре. Не могу понять, как сделать главного героя, который вверху справа, ярким. При этом он дальше всех.  Помогите, пожалуйста, закончить грамотно. Цветные карандаши.</div>
+            </div></div><h2>36_D. .Анюта.</h2><div class='gallery'>
+            <div class="gallery-item">
+                <a href="assets/user143273775/36_D_.Анюта._1.jpg" data-fancybox="all_gallery" data-caption="36_D. .Анюта. | 36_D_.Анюта._1.jpg">
+                    <img src="assets/user143273775/36_D_.Анюта._1.jpg" loading="lazy">
+                </a>
+                <div class="tag-badge">36_D_.Анюта._1.jpg</div>
+                <button class="comment-toggle" type="button">💬 Показать комментарий</button><div class="comment-box">Да вечером тоже будет приём</div>
+            </div></div><h2>37_D. Алексей</h2><div class='gallery'>
+            <div class="gallery-item">
+                <a href="assets/user893795114/37_D_Алексей_1_ДУБЛЬ.jpg" data-fancybox="all_gallery" data-caption="37_D. Алексей | 37_D_Алексей_1_ДУБЛЬ.jpg">
+                    <img src="assets/user893795114/37_D_Алексей_1_ДУБЛЬ.jpg" loading="lazy">
+                </a>
+                <div class="tag-badge">37_D_Алексей_1_ДУБЛЬ.jpg</div>
+                <button class="comment-toggle" type="button">💬 Показать комментарий</button><div class="comment-box">Здравствуйте, Олег Леонидович, Владимир Николаевич и все присутствующие! Благодарю вас за разбор моих прошлых работ: «Зайчики в зимнем лесу», «Осенний лес», «Задний двор» и т. д. Я не имею художественного образования, учусь по видеоурокам из интернета. По поводу выставленной работы у меня вопрос: почему эту работу опытные художники называют скорее иллюстрацией, а не живописью? Спасибо</div>
+            </div>
+            <div class="gallery-item">
+                <a href="assets/user893795114/37_D_Алексей_2_ДУБЛЬ.jpg" data-fancybox="all_gallery" data-caption="37_D. Алексей | 37_D_Алексей_2_ДУБЛЬ.jpg">
+                    <img src="assets/user893795114/37_D_Алексей_2_ДУБЛЬ.jpg" loading="lazy">
+                </a>
+                <div class="tag-badge">37_D_Алексей_2_ДУБЛЬ.jpg</div>
+                <button class="comment-toggle" type="button">💬 Показать комментарий</button><div class="comment-box">Здравствуйте, Олег Леонидович и Владимир Николаевич и все присутствующие! Благодарю Вас за разбор моих прошлых работ: зайчики в зимнем лесу, осенний лес, задний двор и т.д. Я не имею художественного образования, учусь по видео урокам из интернета. Относительно выставленной  работы у меня вопрос: почему эту работу опытные художники называют больше иллюстрацией, а не живописью? Спасибо!</div>
+            </div></div><h2>38_D. Ольга</h2><div class='gallery'>
+            <div class="gallery-item">
+                <a href="assets/user915968713/38_D_Ольга_1.jpg" data-fancybox="all_gallery" data-caption="38_D. Ольга | 38_D_Ольга_1.jpg">
+                    <img src="assets/user915968713/38_D_Ольга_1.jpg" loading="lazy">
+                </a>
+                <div class="tag-badge">38_D_Ольга_1.jpg</div>
+                <button class="comment-toggle" type="button">💬 Показать комментарий</button><div class="comment-box">Здравствуйте. Этот этюд писала с натуры, облака в горах. Но сколько не исправляла смотрится детским рисунком. место Иссык-Куль. Спасибо</div>
+            </div>
+            <div class="gallery-item">
+                <a href="assets/user915968713/38_D_Ольга_2.jpg" data-fancybox="all_gallery" data-caption="38_D. Ольга | 38_D_Ольга_2.jpg">
+                    <img src="assets/user915968713/38_D_Ольга_2.jpg" loading="lazy">
+                </a>
+                <div class="tag-badge">38_D_Ольга_2.jpg</div>
+                <button class="comment-toggle" type="button">💬 Показать комментарий</button><div class="comment-box">А это фото</div>
+            </div></div>
+</div>
+    <script src="https://cdn.jsdelivr.net/npm/@fancyapps/ui@5.0/dist/fancybox/fancybox.umd.js"></script>
+    <script>
+        const sizeSlider = document.getElementById('sizeSlider');
+        const savedSize = localStorage.getItem('thumbSize') || '450';
+        sizeSlider.value = savedSize;
+        document.documentElement.style.setProperty('--thumb-size', savedSize + 'px');
+
+        sizeSlider.addEventListener('input', function() {
+            const val = this.value + 'px';
+            document.documentElement.style.setProperty('--thumb-size', val);
+            localStorage.setItem('thumbSize', this.value);
+        });
+
+        // --- КОММЕНТАРИИ ---
+        document.querySelectorAll('.comment-toggle').forEach(btn => {
+            btn.addEventListener('click', function(e) {
+                e.preventDefault();
+                const box = this.nextElementSibling;
+                const isOpen = box.classList.toggle('open');
+                this.textContent = isOpen ? '💬 Скрыть комментарий' : '💬 Показать комментарий';
+            });
+        });
+
+        const canvas = document.getElementById('review-canvas');
+        const ctx = canvas.getContext('2d');
+        const tools = document.getElementById('review-tools');
+        const toggleBtn = document.getElementById('reviewToggleBtn');
+        let isDrawing = false;
+        let active = false;
+
+        // --- ПАЛИТРА (10 столбцов × 8 строк, как на рисунке) ---
+PALETTE = [
+    ['#ff0000', '#ffffff', '#e8e8e8', '#cccccc', '#b3b3b3', '#999999', '#808080', '#666666', '#3f3f3f', '#1a1a1a'],
+    ['#0a3a5a', '#0a1a5a', '#3a0a5a', '#5a0a3a', '#7a0a0a', '#7a2a0a', '#6a4a0a', '#5a5a0a', '#3a5a0a', '#0a4a0a'],
+    ['#0a5a8a', '#0a2a8a', '#5a0a8a', '#8a0a5a', '#a01a1a', '#a03a0a', '#8a5a0a', '#7a7a0a', '#4a7a0a', '#0a6a0a'],
+    ['#1a7aaa', '#1a3aaa', '#7a1aaa', '#aa1a7a', '#c02a2a', '#c04a0a', '#aa7a0a', '#9a9a0a', '#5a9a0a', '#1a8a1a'],
+    ['#2a9aca', '#2a5aca', '#9a2aca', '#ca2a9a', '#e03a3a', '#e05a0a', '#ca9a0a', '#baba0a', '#6aba0a', '#2aaa2a'],
+    ['#4abaea', '#4a7aea', '#ba4aea', '#ea4aba', '#f06a6a', '#f08a2a', '#eaba2a', '#dada2a', '#8ada2a', '#4aca4a'],
+    ['#7adafa', '#7aaafa', '#da7afa', '#fa7ada', '#fa9a9a', '#faaa6a', '#fada6a', '#fafa6a', '#aafa6a', '#7aea7a'],
+    ['#baeafa', '#bad6fa', '#eabafa', '#fabaea', '#facaca', '#fad6aa', '#faeaaa', '#fafaaa', '#dafaaa', '#bafaca']
+];
+        const palettePanel = document.getElementById('palette-panel');
+        const colorPickerBtn = document.getElementById('colorPickerBtn');
+
+        function setStroke(c) {
+            ctx.strokeStyle = c;
+            colorPickerBtn.style.background = c;
+        }
+
+        function buildPalette() {
+            const palette = document.getElementById('palette');
+            palette.innerHTML = '';
+            PALETTE.forEach(row => {
+                row.forEach(color => {
+                    const d = document.createElement('div');
+                    d.className = 'swatch';
+                    d.style.background = color;
+                    d.addEventListener('click', () => {
+                        setStroke(color);
+                        document.querySelectorAll('.swatch').forEach(s => s.classList.remove('active'));
+                        d.classList.add('active');
+                    });
+                    palette.appendChild(d);
+                });
+            });
+        }
+
+        colorPickerBtn.addEventListener('click', () => {
+            palettePanel.classList.toggle('open');
+        });
+
+        function clearCanvas() { ctx.clearRect(0, 0, canvas.width, canvas.height); }
+
+        function toggleReview() {
+            active = !active;
+            if (active) {
+                canvas.width = window.innerWidth;
+                canvas.height = window.innerHeight;
+                ctx.lineWidth = 3;
+                ctx.lineCap = 'round';
+                ctx.strokeStyle = '#f00';
+                canvas.classList.add('active');
+                tools.style.display = 'flex';
+                toggleBtn.classList.add('active');
+                toggleBtn.textContent = '✏️ РЕЖИМ РАЗБОРА (ВКЛ)';
+            } else {
+                canvas.classList.remove('active');
+                tools.style.display = 'none';
+                toggleBtn.classList.remove('active');
+                toggleBtn.textContent = '✏️ РЕЖИМ РАЗБОРА';
+                palettePanel.classList.remove('open');
+            }
+        }
+
+        toggleBtn.addEventListener('click', toggleReview);
+
+        canvas.addEventListener('mousedown', (e) => { if(!active) return; isDrawing=true; ctx.beginPath(); ctx.moveTo(e.clientX, e.clientY); });
+        canvas.addEventListener('mousemove', (e) => { if(!active || !isDrawing) return; ctx.lineTo(e.clientX, e.clientY); ctx.stroke(); });
+        canvas.addEventListener('mouseup', () => isDrawing=false);
+        
+        canvas.addEventListener('touchstart', (e) => {
+            if (!active) return; e.preventDefault(); const t = e.touches[0];
+            isDrawing = true; ctx.beginPath(); ctx.moveTo(t.clientX, t.clientY);
+        });
+        canvas.addEventListener('touchmove', (e) => {
+            if (!active || !isDrawing) return; e.preventDefault(); const t = e.touches[0];
+            ctx.lineTo(t.clientX, t.clientY); ctx.stroke();
+        });
+        canvas.addEventListener('touchend', () => isDrawing = false);
+
+        Fancybox.bind('[data-fancybox]', {
+            Carousel: { infinite: false },
+            on: { closing: () => { if(active) toggleReview(); clearCanvas(); }, 'Carousel.change': () => clearCanvas() }
+        });
+
+        buildPalette();
+        setStroke('#ff0000');
+    </script>
+</body>
+</html>
